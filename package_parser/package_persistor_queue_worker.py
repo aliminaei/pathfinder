@@ -7,7 +7,7 @@ import config as config
 
 class Package_Persistor_Queue_Worker:
     def callback(self, ch, method, properties, body):
-        print check_call("php bin/console app:package:persist '%s'"%body, shell=True)
+        print check_call("php ../bin/console app:package:persist '%s'"%body, shell=True)
 
         ch.basic_ack(delivery_tag = method.delivery_tag)
 
