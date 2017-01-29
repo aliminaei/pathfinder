@@ -1,3 +1,20 @@
-app:
-    resource: "@AppBundle/Controller/"
-    type:     annotation
+shortest_path:
+    path:     /api/path/{user1}/{user2}
+    defaults: { _controller: AppBundle:API:shortestPath }
+    methods:  [GET]
+
+potentials:
+    path:     /api/packages/{vendor}/{package}/potentials
+    defaults: { _controller: AppBundle:API:potentialContributors }
+    methods:  [GET]
+
+api_doc:
+    resource: "@NelmioApiDocBundle/Resources/config/routing.yml"
+    prefix:   /api/doc
+
+root:
+    path: /
+    defaults:
+        _controller: FrameworkBundle:Redirect:urlRedirect
+        path: /api/doc
+        permanent: true
