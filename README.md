@@ -12,7 +12,7 @@ Requirements
 ------------
 
   * PHP 5.5.9 or higher;
-  * The [usual Symfony application requirements](http://symfony.com/doc/current/reference/requirements.html).
+  * The usual [Symfony application requirements](http://symfony.com/doc/current/reference/requirements.html).
   * [FOSRestBundle](https://github.com/FriendsOfSymfony/FOSRestBundle).
   * [JMSSerializerBundle](https://github.com/schmittjoh/JMSSerializerBundle).
   * [NelmioCorsBundle](https://github.com/nelmio/NelmioCorsBundle).;
