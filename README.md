@@ -22,8 +22,8 @@ Installation
 ------------
 
 1. Install the [Symfony Installer](https://github.com/symfony/symfony-installer) if you haven't already.
-2. Install the [mysql](https://www.mysql.com/).:
-3. Install [composer](http://getcomposer.org/) following the instructions [here](http://getcomposer.org/)
+2. Install [mysql](https://www.mysql.com/).
+3. Install [composer](http://getcomposer.org/) following the instructions [here](http://getcomposer.org/).
 4. Clone this repo `git clone https://github.com/aliminaei/pathfinder.git`
 5. Update/Install the project dependencies by executing the command below:
 ```bash
@@ -33,6 +33,14 @@ $ composer install
 
 Usage
 -----
+Update your database connection settings in `config.yml` and `parameters.yml` and create a database named pathfinder.
+Then execute the line below in your terminal to create all tables in your database:
+
+```bash
+$ php bin/console doctrine:schema:update --force
+```
+
+
 Before using the APIs you need to build your parse the packages and build your database.
 The package parser's documentation can be find [here](https://github.com/aliminaei/pathfinder/tree/master/package_parser).
 
