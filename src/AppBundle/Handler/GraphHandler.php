@@ -68,6 +68,19 @@ class GraphHandler
             return "Not connected!";
         }
 
+        $duplicatePackages = [];
+        $path = [];
+
+        while(count($sourcePackages) > 0)
+        {
+            $currentNode = array_pop($sourcePackages);
+            array_push($path, $currentNode);
+            if (in_array($user2, $currentNode->getContributors()))
+            {
+                return $path;
+            }
+        }
+
         $package = $this->entityManager->getRepository('AppBundle:Package')->findOneBy(['name' => '00f100/cakephp-opauth']);
 
         if($package) return $package->getContributors()->map(function($item) { return $item->getName(); })->toArray();
