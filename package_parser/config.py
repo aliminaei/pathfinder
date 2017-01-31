@@ -1,4 +1,4 @@
 RABBITMQ_HOST = "localhost"
 PACKAGE_PARSER_QUEUE_NAME = 'parser_queue'
 PACKAGE_PERSISTOR_QUEUE_NAME = 'persistor_queue'
-PROJECT_ROOT_PATH = '~/pathfinder'
+PROJECT_ROOT_PATH = '~/ali/projects/pathfinder'

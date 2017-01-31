@@ -22,15 +22,27 @@ class Package_Parser_Queue_Worker:
             return
 
         if repo_url == "":
-            # print "Error parsing repository url for package '%s'"%package_name
-            ch.basic_ack(delivery_tag = method.delivery_tag)
-            return
+            try:
+                self.send_to_persistor_queue(package_name, "", [])
+                ch.basic_ack(delivery_tag = method.delivery_tag)
+                return
+            except:
+                print "Something went wrong with adding package '%s' to persistor queue"%package_name
+                ch.basic_reject(method.delivery_tag, requeue=True)
+                return
+            
 
         #Some of the packages have their repository hosted on other sites eg bitbucket, so we are ignoring them!
         if "github" not in repo_url:
             # print "Package '%s' does not exist on github"%package_name
-            ch.basic_ack(delivery_tag = method.delivery_tag)
-            return
+            try:
+                self.send_to_persistor_queue(package_name, "", [])
+                ch.basic_ack(delivery_tag = method.delivery_tag)
+                return
+            except:
+                print "Something went wrong with adding package '%s' to persistor queue"%package_name
+                ch.basic_reject(method.delivery_tag, requeue=True)
+                return
 
         #extracting repo name
         repo_name =  repo_url.replace('https://github.com/', '').replace("http://github.com/", "")
@@ -44,7 +56,11 @@ class Package_Parser_Queue_Worker:
             return
 
         if req.status_code == 200:
-            contributors = [user["login"] for user in req.json()]
+            try:
+                contributors = [user["login"] for user in req.json()]
+            except:
+                contributors = []
+
             #Adding the package and the contributord to another queue. The persistor queue is FIFO and only one worker should handle it so we can handle duplicate entries in DB.
             try:
                 self.send_to_persistor_queue(package_name, contributors_url, contributors)
@@ -65,10 +81,22 @@ class Package_Parser_Queue_Worker:
             ch.basic_reject(method.delivery_tag, requeue=True)
         elif req.status_code == 404:
             # print "Package '%s' does not exist on github anymore!"%(package_name)
-            ch.basic_ack(delivery_tag = method.delivery_tag)
+            #Adding the package and the contributord to another queue. The persistor queue is FIFO and only one worker should handle it so we can handle duplicate entries in DB.
+            try:
+                self.send_to_persistor_queue(package_name, contributors_url, [])
+            except:
+                print "Something went wrong with adding package '%s' to persistor queue"%package_name
+                ch.basic_reject(method.delivery_tag, requeue=True)
+                return
         else:
             # print "Error parsing package: %s - url: %s"%(package_name, contributors_url)
-            ch.basic_ack(delivery_tag = method.delivery_tag)
+            #Adding the package and the contributord to another queue. The persistor queue is FIFO and only one worker should handle it so we can handle duplicate entries in DB.
+            try:
+                self.send_to_persistor_queue(package_name, contributors_url, [])
+            except:
+                print "Something went wrong with adding package '%s' to persistor queue"%package_name
+                ch.basic_reject(method.delivery_tag, requeue=True)
+                return
 
     def send_to_persistor_queue(self, package_name, contributors_url, contributors):
         connection = pika.BlockingConnection(pika.ConnectionParameters(host=config.RABBITMQ_HOST))
