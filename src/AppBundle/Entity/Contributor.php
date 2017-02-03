@@ -93,6 +93,22 @@ class Contributor
     }
 
     /**
+     * Get packages
+     *
+     * @return array 
+     */
+    public function getPackageNamesAsArray()
+    {
+        $names = [];
+
+        foreach ($this->packages as $package)
+        {
+            $names[] = $package->getName();
+        }
+        return $names;
+    }
+
+    /**
      * Add package to packages
      *
      * @param Package $package

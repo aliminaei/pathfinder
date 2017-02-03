@@ -3,21 +3,25 @@
 namespace AppBundle\Handler;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
-
-use AppBundle\Adapter\PackagistAdapter;
-use AppBundle\Adapter\GithubAdapter;
-use AppBundle\Adapter\ArangoDBAdapter;
+use Symfony\Bridge\Monolog\Logger;
 use Doctrine\ORM\EntityManager;
 use AppBundle\Entity\Package;
 use AppBundle\Entity\Contributor;
+use AppBundle\Node;
 
 class GraphHandler
 {
     protected $entityManager;
+    protected $logger;
+    protected $path;
+    protected $visitedPackages;
 
-    public function __construct(EntityManager $entityManager)
+    public function __construct(EntityManager $entityManager, Logger $logger)
     {
         $this->entityManager = $entityManager;
+        $this->logger = $logger;
+        $this->path = [];
+        $this->visitedPackages = [];
     }
 
     /**
@@ -42,57 +46,121 @@ class GraphHandler
         }
 
 
-        $user1 = $this->getUserByUsername($username1);
+        $user1 = $this->getContributorByUsername($username1);
         if (!$user1)
         {
             return "ERROR - User1 not found";
         }
 
-        $user2 = $this->getUserByUsername($username2);
+        $user2 = $this->getContributorByUsername($username2);
         if (!$user2)
         {
             return "ERROR - User2 not found";
         }
 
-        $sourcePackages = $this->getUserPackages($user1);
-        if (!$sourcePackages || count($sourcePackages) == 0)
+        $startNodes = $this->getUserPackageNodes($user1);
+        if (!$startNodes || count($startNodes) == 0)
         {
             //User1 has not contributed to any packages! this should not happen really but just in case..
-            return "Not connected!";
+            return "Not connected1!";
         }
 
-        $destPackages = $this->getUserPackages($user2);
-        if (!$destPackages || count($destPackages) == 0)
+        if (!$user2->getPackages() || count($user2->getPackages()) == 0)
         {
             //User2 has not contributed to any packages! this should not happen really but just in case..
-            return "Not connected!";
+            return "Not connected2!";
         }
 
-        $duplicatePackages = [];
-        $path = [];
-
-        while(count($sourcePackages) > 0)
+        while (count($startNodes) > 0)
         {
-            $currentNode = array_pop($sourcePackages);
-            array_push($path, $currentNode);
-            if (in_array($user2, $currentNode->getContributors()))
+            $node = $this->checkPath($startNodes, $user2);
+            if ($node)
             {
-                return $path;
+                return $this->calculatePath($node);
+            }
+            else
+            {
+                $startNodes = $this->getNextLevelNodes($startNodes);
+                // return "OOOPS";
+            }
+        }
+    }
+
+    protected function calculatePath($node)
+    {
+        $path = [];
+        while ($node)
+        {
+            array_unshift($path, $node->getPackageName());
+            $node = $node->getParent();
+        }
+
+        return $path;
+    }
+
+    protected function checkPath($nodes, $user)
+    {
+        foreach($nodes as $currentNode)
+        {
+            array_push($this->visitedPackages, $currentNode->getPackageName());
+            $contributors = $this->getPackageContributorsAsArray($currentNode->getPackageName());
+            foreach ($contributors as $contributor)
+            {
+                if ($user == $contributor)
+                {
+                    return $currentNode;
+                }
             }
         }
 
-        $package = $this->entityManager->getRepository('AppBundle:Package')->findOneBy(['name' => '00f100/cakephp-opauth']);
-
-        if($package) return $package->getContributors()->map(function($item) { return $item->getName(); })->toArray();
-        else return [];
+        return null;
     }
 
-    protected function getNeighbours($user)
+    protected function getNextLevelNodes($nodes)
     {
-        
+        $neighbours = [];
+        foreach ($nodes as $node)
+        {
+            $contributors = $this->getPackageContributorsAsArray($node->getPackageName());
+            foreach ($contributors as $contributor)
+            {
+                $userPackageNodes = $this->getUserPackageNodes($contributor, $node);
+                $neighbours = array_merge($neighbours, $userPackageNodes);
+            }
+        }
+
+        return $neighbours;
     }
 
-    protected function getUserByUsername($username)
+    protected function getUserPackageNodes($user, $parent = null)
+    {
+        $nodes = [];
+        $userPackages = $user->getPackageNamesAsArray();
+        $diff = array_diff($userPackages,  $this->visitedPackages);
+        $unvisitedUniquePackages = array_unique($diff);
+        foreach ($unvisitedUniquePackages as $package)
+        {
+            $node = new Node($package, $parent);
+            $nodes[$package] = $node;
+        }
+        return $nodes;
+    }
+
+    protected function checkConnection($packageName, $contributor)
+    {
+        $package = $this->entityManager->getRepository('AppBundle:Package')->findOneBy(['name' => $packageName]);
+        if ($package)
+        {
+            return in_array($contributor, $package->getContributors()->map(function($item) { return $item->getName(); })->toArray());
+        }
+        else
+        {
+            return false;
+        }
+
+    }
+
+    protected function getContributorByUsername($username)
     {
         $user = $this->entityManager->getRepository('AppBundle:Contributor')->findOneBy(['name' => $username]);
         if ($user)
@@ -105,16 +173,12 @@ class GraphHandler
         }
     }
 
-    protected function getUserPackages($user)
+    protected function getPackageContributorsAsArray($packageName)
     {
-        if ($user)
-        {
-            return $user->getPackages()->map(function($item) { return $item->getName(); })->toArray();
-        }
-        else
-        {
-            return [];
-        }
+        $package = $this->entityManager->getRepository('AppBundle:Package')->findOneBy(['name' => $packageName]);
+
+        if($package) return $package->getContributors()->map(function($item) { return $item; })->toArray();
+        else return [];
     }
 
     /**
