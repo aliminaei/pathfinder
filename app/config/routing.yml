@@ -1,10 +1,10 @@
 shortest_path:
-    path:     /api/path/{user1}/{user2}
+    path:     /api/path/{username1}/{username2}
     defaults: { _controller: AppBundle:API:shortestPath }
     methods:  [GET]
 
 potentials:
-    path:     /api/packages/{vendor}/{package}/potentials
+    path:     /api/packages/{vendorName}/{packageName}/potentials
     defaults: { _controller: AppBundle:API:potentialContributors }
     methods:  [GET]
 

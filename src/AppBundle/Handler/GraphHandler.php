@@ -25,7 +25,7 @@ class GraphHandler
     }
 
     /**
-     * Retrives the shortest path between the two contributors.
+     * Retrieves the shortest path between the two contributors.
      * 
      * 
      * @param  string $username1  -  The first contributor's github username
@@ -148,7 +148,7 @@ class GraphHandler
     }
 
     /**
-     * Retrives a list of all neighbor nodes(packages) for the given nodes.
+     * Retrieves a list of all neighbor nodes(packages) for the given nodes.
      * 
      * 
      * @param  Node $nodes  -  The packags as nodes.
@@ -172,7 +172,7 @@ class GraphHandler
     }
 
     /**
-     * Retrives a list of all packages as nodes for the given contributor.
+     * Retrieves a list of all packages as nodes for the given contributor.
      * 
      * 
      * @param  $contributor  -  The contributor.
@@ -222,7 +222,7 @@ class GraphHandler
     }
 
     /**
-     * Retrives the Contributor object from the database for the given github username.
+     * Retrieves the Contributor object from the database for the given github username.
      * 
      * 
      * @param  $username  -  github username.
@@ -243,7 +243,7 @@ class GraphHandler
     }
 
     /**
-     * Retrives the list Contributors from the database that has contributed to the given package.
+     * Retrieves the list Contributors from the database that has contributed to the given package.
      * 
      * 
      * @param  $packageName  -  The package name.
@@ -259,19 +259,113 @@ class GraphHandler
     }
 
     /**
-     * Retrives the list of top users who might want to contribute to the given package.
-     * Users are ranked based on their number of contributions to other packages.
+     * Retrieves the list of top users who might want to contribute to the given package.
+     * Top potentials are calculated based on this formula:
+     * 1. If the given package does not have any contributors, then we just return the users sorted by their total number of contributions to other packages.
+     * 2. If the given package has some contributors, we find other contributors that have the shortest path to the current contributors and we sort them based on their number of connections
+     * to the given package. For example imagine package A has 2 users (X, Y). user X has contributed to packages B and C and user Y has contributed to packages B and D.
+     * now we have 3 packages to process, B, C and D.
+     * Package B has 4 contributors: W, X, Y and Z
+     * Package C has 4 contributors: U, V, W and X
+     * Package D has 3 contributorsL W, Y and Z
+     * now we have a list of all contributors for all 3 packages, we have to exclude X and Y as they are already contributing to package A.
+     * So our ranked potential contributors are W(score 3), Z(score 2), U(score 1) and V(score 1).
+     *
+     * Please note, if the package has some contributoprs but we could not find any other contributors with the path==1, we return the overl top ranked users (like the packages without any contributors)
      * 
      * 
      * @param  string $package  -  The name of the package.
      *
      * @return the shortest path in json format.
      */
-    public function getPotentialContributors($package)
+    public function getPotentialContributors($vendorName, $packageName)
     {
-        $package = $this->entityManager->getRepository('AppBundle:Package')->findOneBy(['name' => '00f100/cakephp-opauth']);
+         //Checking if usernames are valid!
+        if (empty($vendorName) || empty($packageName))
+        {
+            return "ERROR - invalid parameter!";
+        }
+        $packageName = $vendorName."/".$packageName;
+        $package = $this->entityManager->getRepository('AppBundle:Package')->findOneBy(['name' => $packageName]);
 
-        if($package) return $package->getContributors()->map(function($item) { return $item->getName(); })->toArray();
-        else return [];
+        if (!$package)
+        {
+            return "ERROR - package not found!";
+        }
+
+        $potentials = [];
+
+        $contributors = $this->getPackageContributorsAsArray($packageName);
+        if (count($contributors) == 0)
+        {
+            //the package has no contributors! returning top users as potentials!!
+            $potentials = $this->getTopContributors();
+        }
+        else
+        {
+            //The package has some contributors, return top neighbors as potentials.
+            $potentials = $this->getRankedNeighbourContributors($contributors);
+            if (count($potentials) == 0)
+            {
+                $potentials = $this->getTopContributors();   
+            }
+        }
+
+        return $potentials;
     }
+
+    /**
+     * Retrieves the list of users (top 20) sorted by the total number of packages they have contributed into.
+     * 
+     * 
+     * @return the list of ranked users.
+     */
+    protected function getTopContributors()
+    {
+        $repository = $this->entityManager->getRepository('AppBundle:Contributor');
+
+        $query = $repository->createQueryBuilder('c')
+            ->select('c.name, COUNT(p.id) as total')
+            ->innerJoin('c.packages', 'p')
+            ->groupby('c.name')
+            ->orderby('total', 'desc')
+            ->setMaxResults(20)
+            ->getQuery();
+
+        return $query->getResult();
+    }
+
+
+    /**
+     * Retrieves the list of users who have the shortest path to the given contributors.
+     * Users are ranked based on their number of connections to given contributors.
+     * 
+     * 
+     * @param  $contributors  -  The name of the package.
+     *
+     * @return the list of ranked users.
+     */
+    protected function getRankedNeighbourContributors($contributors)
+    {
+        $potentials = [];
+        foreach ($contributors as $contributor)
+        {
+            foreach ($contributor->getPackages() as $package)
+            {
+                foreach ($package->getContributors() as $neightbor)
+                {
+                    if (!in_array($neightbor, $contributors))
+                    {
+                        if (!array_key_exists($neightbor->getName(), $potentials))
+                        {
+                            $potentials[$neightbor->getName()] = 0;
+                        }
+                        $potentials[$neightbor->getName()] = $potentials[$neightbor->getName()] + 1;
+                    }
+                }
+            }    
+        }
+        return $potentials;
+    }
+
 }

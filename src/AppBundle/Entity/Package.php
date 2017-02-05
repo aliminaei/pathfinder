@@ -124,6 +124,22 @@ class Package
      *
      * @return array
      */
+    public function getContributorsAsStringArray()
+    {
+        $names = [];
+        foreach ($this->contributors as $contributor)
+        {
+            $names[] = $contributor->getName();
+        }
+
+        return $names;
+    }
+
+    /**
+     * Get contributors
+     *
+     * @return array
+     */
     public function getContributors()
     {
         return $this->contributors;
