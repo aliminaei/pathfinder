@@ -97,15 +97,15 @@ class Contributor
      *
      * @return array 
      */
-    public function getPackageNamesAsArray()
+    public function getPackagesAsArray()
     {
-        $names = [];
+        $packages = [];
 
         foreach ($this->packages as $package)
         {
-            $names[] = $package->getName();
+            $packages[$package->getId()] = $package->getName();
         }
-        return $names;
+        return $packages;
     }
 
     /**

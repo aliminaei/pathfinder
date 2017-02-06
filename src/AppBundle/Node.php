@@ -6,11 +6,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class Node
 {
+    protected $packageId;
     protected $packageName;
     protected $parent;
 
-    public function __construct($packageName, Node $parent = null)
+    public function __construct($packageId, $packageName, Node $parent = null)
     {
+        $this->packageId = $packageId;
         $this->packageName = $packageName;
         $this->parent = $parent;
     }
@@ -20,9 +22,9 @@ class Node
         return $this->packageName;
     }
 
-    public function getContributors()
+    public function getPackageId()
     {
-
+        return $this->packageId;
     }
 
     public function getParent()

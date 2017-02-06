@@ -173,15 +173,16 @@ class GraphHandler
     }
 
     /**
-     * Retrieves a list of all neighbor nodes(packages) for the given nodes.
+     * Retrieves a list of all neighbor nodes(packages) for the given nodes. USING DOCTORINE I have decided to use native SQL as I believe it's more efficient. so this method is depricated.
      * 
      * 
      * @param  Node $nodes  -  The packags as nodes.
      *
      * @return the neightbor nodes for the given nodes.
      */
-    protected function getNextLevelNodes($nodes)
+    protected function getNextLevelNodes_doctorine($nodes)
     {
+        
         $neighbours = [];
         foreach ($nodes as $node)
         {
@@ -192,6 +193,37 @@ class GraphHandler
                 $neighbours = array_merge($neighbours, $userPackageNodes);
             }
         }
+
+        return $neighbours;
+    }
+
+    /**
+     * Retrieves a list of all neighbor nodes(packages) for the given nodes.
+     * 
+     * 
+     * @param  Node $nodes  -  The packags as nodes.
+     *
+     * @return the neightbor nodes for the given nodes.
+     */
+    protected function getNextLevelNodes($nodes)
+    {
+        $neighbours = [];
+        
+        $queryTemplate = "SELECT * FROM PACKAGES WHERE ID IN (SELECT DISTINCT package_id FROM packages_contributors WHERE contributor_id IN (SELECT contributor_id FROM packages_contributors WHERE package_id = %s) AND package_id <> %s)";
+
+        foreach ($nodes as $node)
+        {
+            $sql = sprintf($queryTemplate, $node->getPackageId(), $node->getPackageId());
+            $stmt = $this->entityManager->getConnection()->prepare($sql);
+            $stmt->execute();
+            $queryResults = $stmt->fetchAll();
+            foreach ($queryResults as $result)
+            {
+                $neighbour = new Node($result['id'], $result['name'], $node);
+                $neighbours[$result['id']] = $neighbour;
+            }
+        }
+        
 
         return $neighbours;
     }
@@ -208,42 +240,19 @@ class GraphHandler
     protected function getContributorPackagesAsNodes($contributor, $parent = null)
     {
         $nodes = [];
-        $contributorPackages = $contributor->getPackageNamesAsArray();
+        $contributorPackages = $contributor->getPackagesAsArray();
 
         //ignoring previously visited packages!
         $diff = array_diff($contributorPackages,  $this->visitedPackages);
         
         //removing duplicate packages, we might get duplicate packages as their might be more than one users contributed to the same package!
         $unvisitedUniquePackages = array_unique($diff);
-        foreach ($unvisitedUniquePackages as $package)
+        foreach ($unvisitedUniquePackages as $packageId => $packageName)
         {
-            $node = new Node($package, $parent);
-            $nodes[$package] = $node;
+            $node = new Node($packageId, $packageName, $parent);
+            $nodes[$packageId] = $node;
         }
         return $nodes;
-    }
-
-    /**
-     * Checks if the given contributor ecists in the given package's contributors.
-     * 
-     * 
-     * @param  $packageName  -  The name of the package.
-     * @param  $contributor  -  The contributor.
-     *
-     * @return true if contributor exists in the given package, otherwise false!
-     */
-    protected function checkConnection_old($packageName, $contributor)
-    {
-        $package = $this->entityManager->getRepository('AppBundle:Package')->findOneBy(['name' => $packageName]);
-        if ($package)
-        {
-            return in_array($contributor, $package->getContributors()->map(function($item) { return $item->getName(); })->toArray());
-        }
-        else
-        {
-            return false;
-        }
-
     }
 
     /**
@@ -373,7 +382,6 @@ class GraphHandler
 
         return $potentials;
     }
-
 
     /**
      * Retrieves the list of users who have the shortest path to the given contributors.
