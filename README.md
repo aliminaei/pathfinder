@@ -44,7 +44,7 @@ $ php bin/console doctrine:schema:update --force
 
 Before using the APIs you need to build your parse the packages and build your database.
 The package parser's documentation can be find [here](https://github.com/aliminaei/pathfinder/tree/master/package_parser).
-You can also build your database by using the provided [database backup]().
+You can also build your database by using the provided [database backup](https://github.com/aliminaei/pathfinder/blob/master/database/db.sql).
 
 After you built the graph, you can start using the API.
 There is no need to configure a virtual host in your web server to access the application.
