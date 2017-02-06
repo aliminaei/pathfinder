@@ -87,7 +87,7 @@ After you built the graph, you can start using the API methods:
 
 2. <b>GET /api/packages/{vendorName}/{packageName}/potentials:</b>
   
-  <b>Live demo example:</b> http://52.56.92.140/api/packages/00f100/uuid/potentials
+  <b>Live demo example:</b> http://52.56.92.140/api/packages/zzk/vim/potentials
 
   Returns a list of potential contributors for the given package. Potential contributors are ranked based on their total contributions to the other PHP packages on packagist.
   Please note that package name is case sensitive.
