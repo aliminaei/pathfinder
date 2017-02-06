@@ -17,6 +17,7 @@ Requirements
   * [JMSSerializerBundle](https://github.com/schmittjoh/JMSSerializerBundle).
   * [NelmioCorsBundle](https://github.com/nelmio/NelmioCorsBundle).;
   * [NelmioApiDocBundle](https://github.com/nelmio/NelmioApiDocBundle).
+  * [PHPUnit](https://phpunit.de/) required for running the tests.
 
 Installation
 ------------
@@ -46,7 +47,13 @@ The package parser's documentation can be find [here](https://github.com/alimina
 
 After you built the graph, you can start using the API.
 There is no need to configure a virtual host in your web server to access the application.
-Just use the built-in web server:
+
+Make sure all the tests are green by running:
+```bash
+$ phpunit
+```
+
+Now just use the built-in web server to start the server:
 
 ```bash
 $ php bin/console server:run
@@ -59,17 +66,17 @@ terminal.
 
 After you built the graph, you can start using the API methods:
 
-1. <b>GET /api/path/{user1}/{user2}</b>: 
+1. <b>GET /api/path/{username1}/{username2}</b>: 
   
-  <b>Live demo example:</b> http://52.56.92.140/api/path/aceat64/Marlinc
+  <b>Live demo example:</b> http://52.56.92.140/api/path/pepakriz/zerkalica
 
   Please note that user names are case sensitive.
   Returns the shortest path between two users in the format below:
   ```
     {
         "ack": "OK",
-        "number_of_hops": 2,
-        "packages_in_path": 
+        "path_len": 2,
+        "path": 
             [
                 "Package1",
                 "Package2"
@@ -77,7 +84,7 @@ After you built the graph, you can start using the API methods:
     }
   ```
 
-2. <b>GET /api/packages/{vendor}/{package}/potentials:</b>
+2. <b>GET /api/packages/{vendorName}/{packageName}/potentials:</b>
   
   <b>Live demo example:</b> http://52.56.92.140/api/packages/00f100/uuid/potentials
 
@@ -87,17 +94,17 @@ After you built the graph, you can start using the API methods:
   ```
   {
     "ack": "OK",
-    "top_users": 
+    "potential_contributors": 
     [
         {
             "name": "User1",
-            "number_of_contributions": 6
+            "score": 6
         }, {
             "name": "User2",
-            "number_of_contributions": 4
+            "score": 4
         }, {
             "name": "User3",
-            "number_of_contributions": 3
+            "score": 3
         }
     ]
   }

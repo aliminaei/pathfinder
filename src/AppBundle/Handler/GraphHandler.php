@@ -367,7 +367,7 @@ class GraphHandler
         {
             $potential = [];
             $potential['name'] = $result['name'];
-            $potential['number of packages'] = $result['total'];
+            $potential['score'] = $result['total'];
             $potentials[] = $potential;
         }
 
@@ -386,7 +386,7 @@ class GraphHandler
      */
     protected function getRankedNeighbourContributors($contributors)
     {
-        $potentials = [];
+        $results = [];
         foreach ($contributors as $contributor)
         {
             foreach ($contributor->getPackages() as $package)
@@ -395,15 +395,29 @@ class GraphHandler
                 {
                     if (!in_array($neightbor, $contributors))
                     {
-                        if (!array_key_exists($neightbor->getName(), $potentials))
+                        if (!array_key_exists($neightbor->getName(), $results))
                         {
-                            $potentials[$neightbor->getName()] = 0;
+                            $results[$neightbor->getName()] = 0;
                         }
-                        $potentials[$neightbor->getName()] = $potentials[$neightbor->getName()] + 1;
+                        $results[$neightbor->getName()] = $results[$neightbor->getName()] + 1;
                     }
                 }
             }    
         }
+
+        asort($results);
+
+        $potentials = [];
+        foreach ($results as $name => $score)
+        {
+            $potential = [];
+            $potential['name'] = $name;
+            $potential['score'] = $score;
+            $potentials[] = $potential;
+        }
+
+        return $potentials;
+
         return $potentials;
     }
 
