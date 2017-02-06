@@ -30,13 +30,14 @@ class APIController extends FOSRestController
      */
     public function shortestPathAction($username1, $username2)
     {
-        // $data = [
-        //     "package_name" => "00f100/cakephp-opauth"
-        // ];
-        // $this->container->get("rs_queue.producer")->produce("crawler", $data);
         $graphHandler = $this->get("graph_handler");
         $message = $graphHandler->getShortestPath($username1, $username2);
-        return new JsonResponse(array("message"=> $message), 200);
+        $responseCode = 200;
+        if ($message['ack'] == 'Error')
+        {
+            $responseCode = 404;
+        }
+        return new JsonResponse($message, $responseCode);
     }
 
     /**
@@ -57,7 +58,11 @@ class APIController extends FOSRestController
     {
         $graphHandler = $this->get("graph_handler");
         $message = $graphHandler->getPotentialContributors($vendorName, $packageName);
-        return new JsonResponse(array("message"=> $message), 200);
-        // return new JsonResponse(array("message"=> "Package not found"), 404);
+        $responseCode = 200;
+        if ($message['ack'] == 'Error')
+        {
+            $responseCode = 404;
+        }
+        return new JsonResponse($message, $responseCode);
     }
 }

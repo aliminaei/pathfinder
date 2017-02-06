@@ -38,27 +38,27 @@ class GraphHandler
         //Checking if usernames are valid!
         if (empty($username1) || empty($username2))
         {
-            return "ERROR - invalid parameter!";
+            return $this->getErrorResponse("Invalid parameter!");
         }
 
         //Checking if usernames are teh same!
         if ($username1 == $username2)
         {
-            return "ERROR - Usernames are the same!";   
+            return $this->getErrorResponse("Usernames are the same!");
         }
 
         //Checking if contributor1 exists in DB!
         $contributor1 = $this->getContributorByUsername($username1);
         if (!$contributor1)
         {
-            return "ERROR - Could not find any contributor for username: ".$username1;
+            return $this->getErrorResponse("Could not find any contributor for username: ".$username1);
         }
 
         //Checking if contributor2 exists in DB!
         $contributor2 = $this->getContributorByUsername($username2);
         if (!$contributor2)
         {
-            return "ERROR - Could not find any contributor for username: ".$username2;
+            return $this->getErrorResponse("Could not find any contributor for username: ".$username2);
         }
 
         $startNodes = $this->getContributorPackagesAsNodes($contributor1);
@@ -66,14 +66,14 @@ class GraphHandler
         if (!$startNodes || count($startNodes) == 0)
         {
             //User1 has not contributed to any packages! this should not happen really but just in case..
-            return "Not connected! - Could not find any packages for contributor: ". $username1;
+            return $this->getErrorResponse("Could not find any packages for contributor: ". $username1);
         }
 
         //Checking if contributor2 has any packages!
         if (!$contributor2->getPackages() || count($contributor2->getPackages()) == 0)
         {
             //User2 has not contributed to any packages! this should not happen really but just in case..
-            return "Not connected! - Could not find any packages for contributor: ". $username2;
+            return $this->getErrorResponse("Could not find any packages for contributor: ". $username2);
         }
 
         //So to claculate the shortest path, we are creating a linked list of packages. Each node has a package name and also keeps a reference of it's parent node.
@@ -90,7 +90,20 @@ class GraphHandler
             if ($node)
             {
                 //We found user2! time to calculate the path by going back on the created linked list from the destination node!.
-                return $this->calculatePath($node);
+                $path = $this->calculatePath($node);
+                $result = [];
+                if (count($path) < 1)
+                {
+                    $result = $this->getErrorResponse(sprintf("users '%s' and '%s' are not connected!", $username1, $username2));
+                }
+                else
+                {
+                    $result['ack'] = "OK";
+                    $result['path_len'] = count($path);
+                    $result['path'] = $path;
+                }
+                
+                return $result;
             }
             else
             {
@@ -98,6 +111,18 @@ class GraphHandler
                 $startNodes = $this->getNextLevelNodes($startNodes);
             }
         }
+
+        // No more packages left and we are still here, so there is no connection!
+        $result = $this->getErrorResponse(sprintf("users '%s' and '%s' are not connected!", $username1, $username2));
+        return $result;
+    }
+
+    protected function getErrorResponse($errorMessage)
+    {
+        $result = [];
+        $result['ack'] = "Error";
+        $result['message'] = $errorMessage;
+        return $result;
     }
 
     /**
@@ -283,14 +308,14 @@ class GraphHandler
          //Checking if usernames are valid!
         if (empty($vendorName) || empty($packageName))
         {
-            return "ERROR - invalid parameter!";
+            return $this->getErrorResponse("Invalid parameter!");
         }
         $packageName = $vendorName."/".$packageName;
         $package = $this->entityManager->getRepository('AppBundle:Package')->findOneBy(['name' => $packageName]);
 
         if (!$package)
         {
-            return "ERROR - package not found!";
+            return $this->getErrorResponse("Package not found!");
         }
 
         $potentials = [];
@@ -311,7 +336,10 @@ class GraphHandler
             }
         }
 
-        return $potentials;
+        $result = [];
+        $result["ack"] = "OK";
+        $result["potential_contributors"] = $potentials;
+        return $result;
     }
 
     /**
@@ -332,7 +360,18 @@ class GraphHandler
             ->setMaxResults(20)
             ->getQuery();
 
-        return $query->getResult();
+        $results = $query->getResult();
+
+        $potentials = [];
+        foreach ($results as $result)
+        {
+            $potential = [];
+            $potential['name'] = $result['name'];
+            $potential['number of packages'] = $result['total'];
+            $potentials[] = $potential;
+        }
+
+        return $potentials;
     }
 
 
