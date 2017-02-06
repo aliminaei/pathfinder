@@ -209,7 +209,7 @@ class GraphHandler
     {
         $neighbours = [];
         
-        $queryTemplate = "SELECT * FROM PACKAGES WHERE ID IN (SELECT DISTINCT package_id FROM packages_contributors WHERE contributor_id IN (SELECT contributor_id FROM packages_contributors WHERE package_id = %s) AND package_id <> %s)";
+        $queryTemplate = "SELECT * FROM packages WHERE id IN (SELECT DISTINCT package_id FROM packages_contributors WHERE contributor_id IN (SELECT contributor_id FROM packages_contributors WHERE package_id = %s) AND package_id <> %s)";
 
         foreach ($nodes as $node)
         {
