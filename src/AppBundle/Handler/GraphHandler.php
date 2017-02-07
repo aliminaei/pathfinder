@@ -158,7 +158,7 @@ class GraphHandler
     {
         foreach($nodes as $currentNode)
         {
-            array_push($this->visitedPackages, $currentNode->getPackageName());
+            $this->visitedPackages[$currentNode->getPackageId()] = $currentNode->getPackageId();
             $contributors = $this->getPackageContributorsAsArray($currentNode->getPackageName());
             foreach ($contributors as $_contributor)
             {
@@ -208,12 +208,19 @@ class GraphHandler
     protected function getNextLevelNodes($nodes)
     {
         $neighbours = [];
+
+        $ignorePackageIds = "";
+        foreach ($this->visitedPackages as $key => $value)
+        {
+            $ignorePackageIds = $ignorePackageIds . $key . ",";
+        }
+        $ignorePackageIds = rtrim($ignorePackageIds, ",");
         
-        $queryTemplate = "SELECT * FROM packages WHERE id IN (SELECT DISTINCT package_id FROM packages_contributors WHERE contributor_id IN (SELECT contributor_id FROM packages_contributors WHERE package_id = %s) AND package_id <> %s)";
+        $queryTemplate = "SELECT * FROM packages WHERE id IN (SELECT DISTINCT package_id FROM packages_contributors WHERE contributor_id IN (SELECT contributor_id FROM packages_contributors WHERE package_id = %s) AND package_id NOT IN (%s))";
 
         foreach ($nodes as $node)
         {
-            $sql = sprintf($queryTemplate, $node->getPackageId(), $node->getPackageId());
+            $sql = sprintf($queryTemplate, $node->getPackageId(), $ignorePackageIds);
             $stmt = $this->entityManager->getConnection()->prepare($sql);
             $stmt->execute();
             $queryResults = $stmt->fetchAll();
